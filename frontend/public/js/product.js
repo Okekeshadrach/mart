@@ -20,17 +20,25 @@ async function renderProductPage() {
 
     document.title = `${product.name} - ${settings?.siteName || 'MART'}`;
     window.MART_PRODUCTS_CACHE = [product, ...related];
+    let selectedImageIndex = 0;
 
     const thumbs = product.images.length > 1
       ? `<div class="flex gap-3 mt-4">${product.images.map((image, index) => `<button onclick="selectImage(${index})" class="w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${index === 0 ? 'border-accent' : 'border-gray-200'}"><img src="${window.escapeHtml(image)}" class="w-full h-full object-cover"></button>`).join('')}</div>`
       : '';
 
     const originalPrice = product.originalPrice
-      ? `<span class="text-lg line-through text-gray-400">$${product.originalPrice.toFixed(2)}</span>`
+      ? `<span class="text-lg line-through text-gray-400">${window.formatCurrency(product.originalPrice)}</span>`
       : '';
+    const stockBadge = product.inStock
+      ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">In Stock</span>'
+      : '<span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-600">Out of Stock</span>';
+    const addToCartLabel = product.inStock ? 'Add to Cart' : 'Out of Stock';
+    const addToCartState = product.inStock
+      ? 'bg-gray-900 text-white hover:opacity-90'
+      : 'cursor-not-allowed bg-gray-200 text-gray-500';
 
     const relatedHtml = related.length
-      ? `<section class="mt-16"><h2 class="text-xl font-bold mb-6">Related Products</h2><div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">${related.map((item) => `<div class="rounded-xl bg-white shadow-sm overflow-hidden"><a href="/product/${encodeURIComponent(item.slug)}"><div class="aspect-square overflow-hidden bg-gray-100"><img src="${window.escapeHtml(item.image)}" alt="${window.escapeHtml(item.name)}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500" loading="lazy"></div></a><div class="p-4"><p class="text-xs text-gray-500 mb-1">${window.escapeHtml(item.category)}</p><a href="/product/${encodeURIComponent(item.slug)}" class="font-semibold text-sm hover:text-accent transition-colors line-clamp-1">${window.escapeHtml(item.name)}</a><div class="flex items-center gap-1 mt-1.5">${detailStars(item.rating, 'w-3 h-3')}</div><p class="font-bold mt-2">$${item.price.toFixed(2)}</p></div></div>`).join('')}</div></section>`
+      ? `<section class="mt-16"><h2 class="text-xl font-bold mb-6">Related Products</h2><div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">${related.map((item) => `<div class="rounded-xl bg-white shadow-sm overflow-hidden"><a href="/product/${encodeURIComponent(item.slug)}"><div class="aspect-square overflow-hidden bg-gray-100"><img src="${window.escapeHtml(item.image)}" alt="${window.escapeHtml(item.name)}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500" loading="lazy"></div></a><div class="p-4"><p class="text-xs text-gray-500 mb-1">${window.escapeHtml(item.category)}</p><a href="/product/${encodeURIComponent(item.slug)}" class="font-semibold text-sm hover:text-accent transition-colors line-clamp-1">${window.escapeHtml(item.name)}</a><div class="flex items-center gap-1 mt-1.5">${detailStars(item.rating, 'w-3 h-3')}</div><p class="font-bold mt-2">${window.formatCurrency(item.price)}</p></div></div>`).join('')}</div></section>`
       : '';
 
     const reviews = product.reviews || [];
@@ -46,19 +54,19 @@ async function renderProductPage() {
       </a>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         <div>
-          <div class="aspect-square rounded-xl overflow-hidden bg-gray-100"><img id="main-image" src="${window.escapeHtml(product.images[0])}" alt="${window.escapeHtml(product.name)}" class="w-full h-full object-cover"></div>
+          <div class="aspect-square rounded-xl overflow-hidden bg-gray-100"><img id="main-image" src="${window.escapeHtml(product.images[0] || product.image)}" alt="${window.escapeHtml(product.name)}" class="w-full h-full object-cover"></div>
           ${thumbs}
         </div>
         <div class="flex flex-col">
           <p class="text-sm text-gray-500 mb-2">${window.escapeHtml(product.category)}</p>
           <h1 class="text-2xl sm:text-3xl font-bold mb-3">${window.escapeHtml(product.name)}</h1>
           <div class="flex items-center gap-2 mb-4"><div class="flex gap-0.5">${detailStars(product.rating)}</div><span class="text-sm text-gray-400">(${product.reviewCount} reviews)</span></div>
-          <div class="flex items-center gap-3 mb-6"><span class="text-3xl font-bold">$${product.price.toFixed(2)}</span>${originalPrice}</div>
+          <div class="mb-6 flex flex-wrap items-center gap-3"><span class="text-3xl font-bold">${window.formatCurrency(product.price)}</span>${originalPrice}${stockBadge}</div>
           <p class="text-gray-500 leading-relaxed mb-6">${window.escapeHtml(product.description)}</p>
           <div class="flex flex-wrap gap-2 mb-8">${product.features.map((feature) => `<span class="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-700">${window.escapeHtml(feature)}</span>`).join('')}</div>
-          <button onclick="addToCart(${product.id})" class="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gray-900 text-white font-semibold hover:opacity-90 transition-opacity">
+          <button id="product-add-to-cart" ${product.inStock ? '' : 'disabled'} class="flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold transition-opacity ${addToCartState}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            Add to Cart
+            ${addToCartLabel}
           </button>
         </div>
       </div>
@@ -67,11 +75,20 @@ async function renderProductPage() {
     `;
 
     window.selectImage = function(index) {
+      selectedImageIndex = index;
       document.getElementById('main-image').src = product.images[index];
       document.querySelectorAll('#product-main button[onclick^="selectImage"]').forEach((button, buttonIndex) => {
         button.className = `w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${buttonIndex === index ? 'border-accent' : 'border-gray-200'}`;
       });
     };
+
+    const addToCartButton = document.getElementById('product-add-to-cart');
+    if (addToCartButton && product.inStock) {
+      addToCartButton.addEventListener('click', () => {
+        const selectedImage = product.images[selectedImageIndex] || product.image;
+        window.addToCart(product.id, { selectedImage });
+      });
+    }
 
     const reviewFormElement = document.getElementById('review-form');
     if (reviewFormElement) {

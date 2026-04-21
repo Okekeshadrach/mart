@@ -42,6 +42,25 @@ function isAuthenticated() {
   return Boolean(getToken());
 }
 
+function getSiteCurrency() {
+  return window.MART_SITE_SETTINGS?.siteCurrency || 'USD';
+}
+
+function formatCurrency(amount, currency = getSiteCurrency()) {
+  const value = Number(amount ?? 0);
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch (error) {
+    return `${currency} ${value.toFixed(2)}`;
+  }
+}
+
 function storeAuth(token, user) {
   localStorage.setItem(MART_TOKEN_KEY, token);
   localStorage.setItem(MART_USER_KEY, JSON.stringify(user));
@@ -177,6 +196,8 @@ const MART_API = {
   getStoredUser,
   getToken,
   isAuthenticated,
+  getSiteCurrency,
+  formatCurrency,
   storeAuth,
   clearAuth,
   redirectToLogin,
@@ -223,10 +244,14 @@ const MART_API = {
     const payload = await request('/cart');
     return payload.data || [];
   },
-  async addToCart(productId, quantity = 1) {
+  async addToCart(productId, quantity = 1, options = {}) {
     const payload = await request('/cart', {
       method: 'POST',
-      body: { product_id: productId, quantity },
+      body: {
+        product_id: productId,
+        quantity,
+        selected_image: options.selectedImage || options.image || null,
+      },
     });
 
     return payload.data || payload;
@@ -241,6 +266,41 @@ const MART_API = {
   },
   async removeCartItem(cartItemId) {
     return request(`/cart/${cartItemId}`, { method: 'DELETE' });
+  },
+  async mergeGuestCart() {
+    const guestCart = window.MART_GUEST_CART?.get?.() || [];
+
+    if (!guestCart.length || !isAuthenticated()) {
+      return { merged: 0, failed: 0 };
+    }
+
+    const payload = guestCart.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      selectedImage: item.selectedImage || item.image || null,
+    }));
+
+    const response = await request('/cart/merge', {
+      method: 'POST',
+      body: { items: payload },
+    });
+
+    const failedItems = response.failedItems || [];
+    const failedIds = new Set(failedItems.map((item) => Number(item.productId)));
+
+    if (failedIds.size) {
+      window.MART_GUEST_CART.save(
+        guestCart.filter((item) => failedIds.has(Number(item.productId))),
+      );
+    } else {
+      window.MART_GUEST_CART.clear();
+    }
+
+    return {
+      merged: response.mergedItemCount || 0,
+      failed: failedItems.length,
+      failedItems,
+    };
   },
   async placeOrder(data) {
     const payload = await request('/orders', {
@@ -266,4 +326,5 @@ const MART_API = {
 
 window.MART_API = MART_API;
 window.escapeHtml = escapeHtml;
+window.formatCurrency = formatCurrency;
 window.showToast = showToast;

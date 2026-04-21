@@ -13,6 +13,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'selected_image',
         'quantity',
         'price',
     ];
@@ -22,6 +23,19 @@ class OrderItem extends Model
         return [
             'price' => 'float',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (OrderItem $orderItem): void {
+            if (blank($orderItem->selected_image) && $orderItem->product_id) {
+                $product = $orderItem->relationLoaded('product')
+                    ? $orderItem->product
+                    : Product::query()->find($orderItem->product_id);
+
+                $orderItem->selected_image = $product?->image;
+            }
+        });
     }
 
     public function order(): BelongsTo

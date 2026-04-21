@@ -16,18 +16,27 @@ function clearGuestCart() {
   localStorage.removeItem(GUEST_CART_KEY);
 }
 
-function addToGuestCart(product) {
+function normalizeGuestCartImage(product, options = {}) {
+  return options.selectedImage || options.image || product.selectedImage || product.image || null;
+}
+
+function addToGuestCart(product, options = {}) {
   const cart = getGuestCart();
-  const existing = cart.find((item) => item.productId === product.id);
+  const selectedImage = normalizeGuestCartImage(product, options);
+  const existing = cart.find((item) => item.productId === product.id && (item.selectedImage || item.image) === selectedImage);
+
   if (existing) {
     existing.quantity++;
+    existing.image = selectedImage;
+    existing.selectedImage = selectedImage;
   } else {
     cart.push({
       productId: product.id,
       name: product.name,
       slug: product.slug,
       price: product.price,
-      image: product.image,
+      image: selectedImage,
+      selectedImage,
       category: product.category,
       quantity: 1,
     });

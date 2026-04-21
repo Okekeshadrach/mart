@@ -16,6 +16,7 @@ class StoreCartItemRequest extends FormRequest
         $this->merge([
             'product_id' => $this->input('product_id', $this->input('productId')),
             'quantity' => $this->input('quantity', $this->input('qty', 1)),
+            'selected_image' => $this->input('selected_image', $this->input('selectedImage')),
         ]);
     }
 
@@ -24,6 +25,7 @@ class StoreCartItemRequest extends FormRequest
         return [
             'product_id' => ['required', 'exists:products,id'],
             'quantity' => ['required', 'integer', 'min:1'],
+            'selected_image' => ['nullable', 'string', 'max:2048'],
         ];
     }
 }

@@ -60,6 +60,7 @@ class OrderController extends Controller
             $order->items()->createMany(
                 $cartItems->map(fn ($item) => [
                     'product_id' => $item->product_id,
+                    'selected_image' => $item->selected_image ?: $item->product?->image,
                     'quantity' => $item->quantity,
                     'price' => $item->product->price,
                 ])->all()
@@ -72,7 +73,10 @@ class OrderController extends Controller
 
         $order->load('items.product.category', 'user');
 
-        Mail::to($order->user)->send(new OrderConfirmationMail($order));
+        rescue(
+            fn () => Mail::to($order->user)->send(new OrderConfirmationMail($order)),
+            report: true,
+        );
 
         return OrderResource::make($order)
             ->response()

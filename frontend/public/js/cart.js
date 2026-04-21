@@ -31,10 +31,27 @@ async function updateCartBadge() {
   return [];
 }
 
-async function addToCart(productId) {
+function findCachedProduct(productId) {
+  if (!Array.isArray(window.MART_PRODUCTS_CACHE)) {
+    return null;
+  }
+
+  return window.MART_PRODUCTS_CACHE.find((product) => product.id === productId) || null;
+}
+
+async function addToCart(productId, options = {}) {
+  const cachedProduct = findCachedProduct(productId);
+
+  if (cachedProduct && cachedProduct.inStock === false) {
+    window.showToast('This product is currently out of stock.', true);
+    return;
+  }
+
+  const selectedImage = options.selectedImage || options.image || cachedProduct?.image || null;
+
   if (window.MART_API.isAuthenticated()) {
     try {
-      await window.MART_API.addToCart(productId, 1);
+      await window.MART_API.addToCart(productId, 1, { selectedImage });
       await updateCartBadge();
       window.showToast('Item added to cart.');
     } catch (error) {
@@ -43,14 +60,11 @@ async function addToCart(productId) {
     return;
   }
 
-  if (typeof window.MART_PRODUCTS_CACHE !== 'undefined') {
-    const product = window.MART_PRODUCTS_CACHE.find((p) => p.id === productId);
-    if (product) {
-      window.MART_GUEST_CART.add(product);
-      updateCartBadge();
-      window.showToast('Item added to cart.');
-      return;
-    }
+  if (cachedProduct) {
+    window.MART_GUEST_CART.add(cachedProduct, { selectedImage });
+    updateCartBadge();
+    window.showToast('Item added to cart.');
+    return;
   }
 
   window.showToast('Please log in to add items to cart.', true);

@@ -13,11 +13,13 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SiteSettingController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
-Route::post('/reset-password', [PasswordResetController::class, 'reset']);
-Route::post('/contact', [ContactController::class, 'store']);
+Route::middleware('throttle:register')->post('/register', [AuthController::class, 'register']);
+Route::middleware('throttle:login')->post('/login', [AuthController::class, 'login']);
+Route::middleware('throttle:password-reset')->group(function () {
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
+    Route::post('/reset-password', [PasswordResetController::class, 'reset']);
+});
+Route::middleware('throttle:contact')->post('/contact', [ContactController::class, 'store']);
 
 Route::get('/settings/site', [SiteSettingController::class, 'show']);
 Route::get('/products', [ProductController::class, 'index']);
@@ -33,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart', [CartController::class, 'store']);
+    Route::post('/cart/merge', [CartController::class, 'merge']);
     Route::patch('/cart/{cartItem}', [CartController::class, 'update']);
     Route::delete('/cart/{cartItem}', [CartController::class, 'destroy']);
 

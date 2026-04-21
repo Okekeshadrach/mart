@@ -104,10 +104,22 @@ function renderProducts(products) {
 
   grid.innerHTML = products.map((product) => {
     const discount = product.originalPrice
-      ? `<span class="text-xs line-through text-gray-400 ml-1">$${product.originalPrice.toFixed(2)}</span>`
+      ? `<span class="text-xs line-through text-gray-400 ml-1">${window.formatCurrency(product.originalPrice)}</span>`
       : '';
+    const stockBadge = product.inStock
+      ? ''
+      : '<span class="absolute left-3 top-3 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-red-600">Out of Stock</span>';
+    const stockText = product.inStock
+      ? ''
+      : '<p class="mt-2 text-xs font-semibold uppercase tracking-wide text-red-500">Out of Stock</p>';
+    const buttonAttributes = product.inStock
+      ? `onclick="addToCart(${product.id})" class="p-2 rounded-lg bg-gray-900 text-white hover:bg-[hsl(20,100%,54%)] transition-colors"`
+      : 'disabled class="cursor-not-allowed rounded-lg bg-gray-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500"';
+    const buttonContent = product.inStock
+      ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>'
+      : 'Sold out';
 
-    return `<div class="product-card rounded-xl bg-white shadow-sm transition-all duration-300 overflow-hidden group"><a href="/product/${encodeURIComponent(product.slug)}"><div class="aspect-square overflow-hidden bg-gray-100"><img src="${window.escapeHtml(product.image)}" alt="${window.escapeHtml(product.name)}" class="product-img w-full h-full object-cover transition-transform duration-500" loading="lazy"></div></a><div class="p-4"><p class="text-xs text-gray-500 mb-1">${window.escapeHtml(product.category)}</p><a href="/product/${encodeURIComponent(product.slug)}" class="font-semibold text-sm hover:text-[hsl(20,100%,54%)] transition-colors line-clamp-1">${window.escapeHtml(product.name)}</a><div class="flex items-center gap-1 mt-1.5">${productStars(product.rating)}<span class="text-xs text-gray-400 ml-1">(${product.reviewCount})</span></div><div class="flex items-center justify-between mt-3"><div class="flex items-center"><span class="font-bold">$${product.price.toFixed(2)}</span>${discount}</div><button onclick="addToCart(${product.id})" class="p-2 rounded-lg bg-gray-900 text-white hover:bg-[hsl(20,100%,54%)] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></button></div></div></div>`;
+    return `<div class="product-card rounded-xl bg-white shadow-sm transition-all duration-300 overflow-hidden group"><a href="/product/${encodeURIComponent(product.slug)}"><div class="relative aspect-square overflow-hidden bg-gray-100">${stockBadge}<img src="${window.escapeHtml(product.image)}" alt="${window.escapeHtml(product.name)}" class="product-img h-full w-full object-cover transition-transform duration-500 ${product.inStock ? '' : 'opacity-70 grayscale'}" loading="lazy"></div></a><div class="p-4"><p class="text-xs text-gray-500 mb-1">${window.escapeHtml(product.category)}</p><a href="/product/${encodeURIComponent(product.slug)}" class="font-semibold text-sm hover:text-[hsl(20,100%,54%)] transition-colors line-clamp-1">${window.escapeHtml(product.name)}</a><div class="flex items-center gap-1 mt-1.5">${productStars(product.rating)}<span class="text-xs text-gray-400 ml-1">(${product.reviewCount})</span></div><div class="mt-3 flex items-center justify-between gap-3"><div><div class="flex items-center"><span class="font-bold">${window.formatCurrency(product.price)}</span>${discount}</div>${stockText}</div><button ${buttonAttributes}>${buttonContent}</button></div></div></div>`;
   }).join('');
 }
 
@@ -142,6 +154,10 @@ async function loadProducts() {
 window.searchQuery = new URLSearchParams(window.location.search).get('search') || '';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof window.loadSiteSettings === 'function') {
+    await window.loadSiteSettings();
+  }
+
   const searchInput = document.getElementById('search-input');
   if (searchInput) {
     searchInput.value = window.searchQuery;
