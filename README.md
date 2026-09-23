@@ -1,35 +1,49 @@
-# MART
+# Mart
 
-Repo layout:
+E-commerce storefront and admin panel built with Laravel and Filament.
 
-- [`frontend/`](./frontend): Laravel frontend on `http://127.0.0.1:8000`
-- [`backend/`](./backend): Laravel API on `http://127.0.0.1:8001`
+A two-app setup: a customer-facing storefront and a separate API/admin service that owns the catalogue,
+orders and site settings.
 
-Admin panel:
+## What it does
 
-- Filament lives in [`backend/`](./backend)
-- Admin URL: `http://127.0.0.1:8001/admin`
-- Site settings page: `http://127.0.0.1:8001/admin/site-settings`
+- **Catalogue** — products, categories and customer reviews
+- **Cart and checkout** — cart items through to placed orders with line items
+- **Admin panel** — Filament resources for products, categories and orders
+- **Site settings** — editable store configuration (branding, contact details) from the admin panel
+- **Accounts** — customer registration and authentication via Laravel Sanctum
 
-Local port map:
+## Stack
 
-- Frontend Laravel app: `8000`
-- Backend Laravel API: `8001`
-- Frontend Vite: `5173`
-- Backend Vite: `5174`
+| Layer | Technology |
+|---|---|
+| Storefront | Laravel, Blade |
+| API + admin | Laravel, Filament, Sanctum |
+| Database | MySQL |
 
-Run locally:
+## Repo layout
 
-```powershell
-cd D:\HP\Prod\mart\backend
-php artisan serve --host=127.0.0.1 --port=8001
+```
+frontend/   Laravel storefront            → http://127.0.0.1:8000
+backend/    Laravel API + Filament admin  → http://127.0.0.1:8001/admin
 ```
 
-```powershell
-cd D:\HP\Prod\mart\frontend
-php artisan serve --host=127.0.0.1 --port=8000
+## Running locally
+
+```bash
+# API + admin
+cd backend
+composer install
+cp .env.example .env && php artisan key:generate
+php artisan migrate --seed
+php artisan serve --port=8001
+
+# Storefront
+cd ../frontend
+composer install
+cp .env.example .env && php artisan key:generate
+php artisan serve --port=8000
 ```
 
-If you need Vite in both apps, run `npm run dev` separately in each project; the ports are already pinned to avoid collisions.
-
-Backend setup, routes, seeded accounts, and artisan commands are documented in [`backend/README.md`](./backend/README.md).
+The admin panel lives at `http://127.0.0.1:8001/admin`, and site settings at
+`http://127.0.0.1:8001/admin/site-settings`.
